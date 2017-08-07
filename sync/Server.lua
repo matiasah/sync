@@ -80,6 +80,22 @@ function Server:Receive(Peer, Data)
 	
 	if Message.Remote then
 		
+		if Message.Push then
+			
+			local Address = 0
+			local Exponent = 1
+			
+			for i = 1, AddressLength do
+				
+				Address = Address + Data:byte(i) * Exponent
+				Exponent = Exponent * 256
+				
+			end
+			
+			local Data = Data:sub(AddressLength + 1)
+			
+		end
+		
 	elseif Message.Create then
 		
 		local ClassNameLength	= Data:byte(1); Data = Data:sub(2)
@@ -173,7 +189,21 @@ function Server:Receive(Peer, Data)
 		
 	elseif Message.Remove then
 		
+		local Address = 0
+		local Exponent = 1
 		
+		for i = 1, AddressLength do
+			
+			Address = Address + Data:byte(i) * Exponent
+			Exponent = Exponent * 256
+			
+		end
+		
+		local Data = Data:sub(AddressLength + 1)
+		local Object = self.RemoteAddress[Address]
+		
+		self.RemoteAddress[Address] = nil
+		self.RemoteObject[Object] = nil
 		
 	end
 	

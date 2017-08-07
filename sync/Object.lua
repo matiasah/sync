@@ -1,7 +1,8 @@
 module("sync.Object", package.seeall)
 
-Messages		= require("sync.messages")
-Functions	= require("sync.functions")
+Sync			=	require("sync")
+Messages		=	require("sync.messages")
+Functions	=	require("sync.functions")
 
 Object = {}
 Object.__index = Object
@@ -72,12 +73,32 @@ function Object:PushChanges()
 
 	local Attributes = self:GetAttributes()
 	local Datagrams = {}
+	
+	local Address = self.Address
+	local AddressLength = Sync.AddressLength
+	local AddressMessage = ""
+	
+	for i = 1, AddressLength do
+		
+		local Byte = Address % 256
+		
+		Address = ( Address - Byte ) / 256
+		AddressMessage = AddressMessage .. string.char(Byte)
+		
+	end
 
 	for Index, Value in pairs(Changes) do
+		
+		local Header = Messages.toByte {
+			Remote	= self.Remote,
+			Push		= true,
+		}
 		
 		local Attribute = Attributes[Index]
 		local StringIndex
 		local IndexType = type(Index)
+		
+		local Datagram = string.char(Header) .. AddressMessage
 		
 		if IndexType == "number" then
 			
@@ -117,13 +138,19 @@ function Object:PushChanges()
 				if NetworkObject then
 					
 					local Address = NetworkObject:GetAddress()
+					local AddressLength = Sync.AddressLength
+					local AddressMessage = ""
 					
-					local Byte1 = Address % 256; Address = ( Address - Byte1 ) / 256
-					local Byte2 = Address % 256; Address = ( Address - Byte2 ) / 256
-					local Byte3 = Address % 256; Address = ( Address - Byte3 ) / 256
-					local Byte4 = Address
+					for i = 1, AddressLength do
+						
+						local Byte = Address % 256
+						
+						Address = ( Address - Byte ) / 256
+						AddressMessage = AddressMessage .. string.char(Byte)
+						
+					end
 					
-					StringValue = string.char(Messages.Object) .. string.char(Byte1) .. string.char(Byte2) .. string.char(Byte3) .. string.char(Byte4)
+					StringValue = string.char(Messages.Object) .. AddressMessage
 					
 				end
 				
@@ -131,12 +158,7 @@ function Object:PushChanges()
 			
 			if StringValue then
 				
-				local Byte = Messages.toByte {
-					Remote	= self.Remote,
-					Push		= true,
-				}
-				
-				table.insert(Datagrams, {string.char(Byte) .. StringIndex .. StringValue, Attribute:GetChannel(), Attribute:GetFlags()})
+				table.insert(Datagrams, {Datagram .. StringIndex .. StringValue, Attribute:GetChannel(), Attribute:GetFlags()})
 				
 			end
 			
@@ -166,19 +188,26 @@ end
 
 function Object:Send(Peer)
 	
-	local Byte = Messages.toByte {
+	local Header = Messages.toByte {
 		Remote = self.Remote,
 		Create = true,
 	}
 	
 	local Address = self.Address
-	local ByteAddr1 = Address % 256; Address = ( Address - ByteAddr1 ) / 256
-	local ByteAddr2 = Address % 256; Address = ( Address - ByteAddr2 ) / 256
-	local ByteAddr3 = Address % 256; Address = ( Address - ByteAddr3 ) / 256
-	local ByteAddr4 = Address
+	local AddressLength = Sync.AddressLength
+	local AddressMessage = ""
+	
+	for i = 1, AddressLength do
+		
+		local Byte = Address % 256
+		
+		Address = ( Address - Byte ) / 256
+		AddressMessage = AddressMessage .. string.char(Byte)
+		
+	end
 	
 	local Name = self.Class:GetName()
-	local Datagram = string.char(Byte) .. string.char(#Name) .. Name .. string.char(ByteAddr1) .. string.char(ByteAddr2) .. string.char(ByteAddr3) .. string.char(ByteAddr4)
+	local Datagram = string.char(Header) .. string.char(#Name) .. Name .. AddressMessage
 	
 	for Index, Attribute in pairs(self.Class:GetAttributes()) do
 		
@@ -225,13 +254,19 @@ function Object:Send(Peer)
 				if NetworkObject then
 					
 					local Address = NetworkObject:GetAddress()
+					local AddressLength = Sync.AddressLength
+					local AddressMessage = ""
 					
-					local Byte1 = Address % 256; Address = ( Address - Byte1 ) / 256
-					local Byte2 = Address % 256; Address = ( Address - Byte2 ) / 256
-					local Byte3 = Address % 256; Address = ( Address - Byte3 ) / 256
-					local Byte4 = Address
+					for i = 1, AddressLength do
+						
+						local Byte = Address % 256
+						
+						Address = ( Address - Byte ) / 256
+						AddressMessage = AddressMessage .. string.char(Byte)
+						
+					end
 					
-					StringValue = string.char(Messages.Object) .. string.char(Byte1) .. string.char(Byte2) .. string.char(Byte3) .. string.char(Byte4)
+					StringValue = string.char(Messages.Object) .. AddressMessage
 					
 				end
 				
