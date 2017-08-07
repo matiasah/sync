@@ -1,5 +1,7 @@
 module("sync.Peer", package.seeall)
 
+Functions = require("sync.Functions")
+
 Peer = {}
 Peer.__index = Peer
 Peer.__type = "Peer"
@@ -12,6 +14,8 @@ function Peer:new(EnetPeer)
 	local self = setmetatable( {}, Peer )
 	
 	self.Peer = EnetPeer
+	self.RemoteObject = {}
+	self.RemoteAddress = {}
 	
 	return self
 	
@@ -44,6 +48,45 @@ end
 function Peer:GetPeer()
 	
 	return self.Peer
+	
+end
+
+function Peer:SetRemoteObject(Object, NetworkObject)
+	
+	self.RemoteObject[Object] = NetworkObject
+	
+end
+
+function Peer:GetRemoteObject(Object)
+	
+	return self.RemoteObject[Object]
+	
+end
+
+function Peer:SetRemoteAddress(Address, Object)
+	
+	self.RemoteAddress[Address] = Object
+	
+end
+
+function Peer:GetRemoteAddress(Address)
+	
+	return self.RemoteAddress[Address]
+	
+end
+
+function Peer:AddRemoteObject(Object)
+	
+	local Obj = Object:GetObject()
+	
+	self.RemoteObject[Obj] = Object
+	self.RemoteAddress[Functions.AddressOf(Obj)] = Object
+	
+end
+
+function Peer:Send(...)
+	
+	self.Peer:send(...)
 	
 end
 

@@ -10,6 +10,7 @@ Messages.Push		= 8
 Messages.Object	= 1
 Messages.Number	= 2
 Messages.String	= 3
+Messages.Nil		= 4
 
 function Messages.toTable(Byte)
 	

@@ -12,14 +12,14 @@ Object.Remote = false
 
 WeakValues = {__mode = "v"}
 
-function Object:new(Class, Object)
+function Object:new(Class, Value)
 	
 	local self = setmetatable( {}, Object )
 	
 	self.Class = Class
 	self.Server = Class:GetServer()
-	self.Object = Object
-	self.Address = Functions.AddressOf(Object)
+	self.Object = Value
+	self.Address = Functions.AddressOf(Value)
 	self.Value = {}
 	self.Peers = setmetatable( {}, WeakValues )
 	
@@ -71,7 +71,7 @@ function Object:PushChanges()
 	local Server = self.Server
 	local Changes = self:FetchChanges()
 
-	local Attributes = self:GetAttributes()
+	local Attributes = self.Class:GetAttributes()
 	local Datagrams = {}
 	
 	local Address = self.Address
@@ -131,9 +131,13 @@ function Object:PushChanges()
 				
 				StringValue = string.char(Messages.String) .. string.char(Byte1) .. string.char(Byte2) .. Value
 				
+			elseif ValueType == "nil" then
+				
+				StringValue = string.char(Messages.Nil)
+				
 			else
 				
-				local NetworkObject = self:GetLocalObject(Value)
+				local NetworkObject = self.Server:GetLocalObject(Value)
 				
 				if NetworkObject then
 					
@@ -158,7 +162,13 @@ function Object:PushChanges()
 			
 			if StringValue then
 				
-				table.insert(Datagrams, {Datagram .. StringIndex .. StringValue, Attribute:GetChannel(), Attribute:GetFlags()})
+				local Packet = {}
+				
+				Packet[1] = Datagram .. StringIndex .. StringValue
+				Packet[2] = Attribute:GetChannel()
+				Packet[3] = Attribute:GetFlags()
+				
+				table.insert(Datagrams, Packet)
 				
 			end
 			
@@ -170,7 +180,7 @@ function Object:PushChanges()
 		
 		for _, Datagram in pairs(Datagrams) do
 			
-			Peer:send(unpack(Datagram))
+			Peer:Send(unpack(Datagram))
 			
 		end
 		
@@ -211,7 +221,7 @@ function Object:Send(Peer)
 	
 	for Index, Attribute in pairs(self.Class:GetAttributes()) do
 		
-		local Value = Attribute:Get(Index)
+		local Value = Attribute:Get(self.Object)
 		
 		local StringIndex
 		local IndexType = type(Index)
@@ -239,13 +249,17 @@ function Object:Send(Peer)
 				
 				StringValue = string.char(Messages.Number) .. Functions.numberToString(Value)
 				
-			elseif IndexType == "string" then
+			elseif ValueType == "string" then
 				
 				local Length = #Value
 				local Byte1 = Length % 256
 				local Byte2 = ( Length - Byte1 ) / 256
 				
 				StringValue = string.char(Messages.String) .. string.char(Byte1) .. string.char(Byte2) .. Value
+				
+			elseif ValueType == "nil" then
+				
+				StringValue = string.char(Messages.Nil)
 				
 			else
 				
@@ -274,12 +288,7 @@ function Object:Send(Peer)
 			
 			if StringValue then
 				
-				local Byte = Messages.toByte {
-					Remote	= self.Remote,
-					Push		= true,
-				}
-				
-				Datagram = Datagram .. string.char(Byte) .. StringIndex .. StringValue
+				Datagram = Datagram .. StringIndex .. StringValue
 				
 			end
 			
@@ -287,7 +296,7 @@ function Object:Send(Peer)
 		
 	end
 	
-	Peer:send(Datagram, self.Class:GetCreateChannel(), self.Class:GetCreateFlags())
+	Peer:Send(Datagram, self.Class:GetCreateChannel(), self.Class:GetCreateFlags())
 	
 end
 
@@ -300,6 +309,20 @@ end
 function Object:GetRemote()
 	
 	return self.Remote
+	
+end
+
+function Object:SetValue(Index, Value)
+	
+	local Attributes = self.Class:GetAttributes()
+	local Attribute = Attributes[Index]
+	
+	if Attribute then
+		
+		Attribute:Set(self.Object, Value)
+		self.Value[Index] = Value
+		
+	end
 	
 end
 

@@ -171,9 +171,13 @@ function Class:AddGetterMethod(Atribute, Name)
 	
 end
 
-function Class:AddAttribute(Attribute)
+function Class:AddAttribute(AttributeName)
 	
-	self.Attributes[Attribute] = Attribute:new()
+	local newAttribute = Attribute:new(AttributeName)
+	
+	self.Attributes[AttributeName] = newAttribute
+	
+	return newAttribute
 	
 end
 

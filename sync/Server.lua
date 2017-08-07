@@ -5,6 +5,7 @@ enet = require("enet")
 Sync			=	require("sync")
 Functions	=	require("sync.functions")
 Messages		=	require("sync.messages")
+Object		=	require("sync.Object")
 Peer			=	require("sync.Peer")
 
 Server = {}
@@ -19,18 +20,23 @@ function Server:new(Port)
 	local self = setmetatable( {}, Server )
 	local Port = Port or 0
 	
-	self.Socket = enet.host_create("0.0.0.0:" .. Port)
+	self.Socket = enet.host_create("localhost:" .. Port)
 	self.Peer = {}
 	
 	self.Class = {}
 	
 	self.LocalObject = setmetatable( {}, WeakKeys )	-- The local objects table
-	self.RemoteObject = {}	-- The remote objects table
-	
 	self.LocalAddress = setmetatable( {}, WeakValues )
-	self.RemoteAddress = {}
+	
+	self.QueuedObjects = setmetatable( {}, WeakValues )
 	
 	return self
+	
+end
+
+function Server:__tostring()
+	
+	return self.Socket:get_socket_address()
 	
 end
 
@@ -40,33 +46,48 @@ function Server:Update()
 	
 	repeat
 		
-		Event = self.Socket:service(0)
+		Event = self.Socket:service()
 		
-		if Event.type == "connect" then
+		if Event then
 			
-			local newPeer = Peer:new(Event.peer)
-			
-			newPeer:SetAddressLength(Event.data)
-			
-			self.Peer[Event.peer] = newPeer
-			
-		elseif Event.type == "disconnect" then
-			
-			self.Peer[Event.peer] = nil
-			
-		elseif Event.type == "receive" then
-			
-			self:Receive(self.Peer[Event.peer], Event.data)
+			if Event.type == "connect" then
+				
+				local newPeer = Peer:new(Event.peer)
+				
+				newPeer:SetAddressLength(Event.data)
+				
+				self.Peer[Event.peer] = newPeer
+				self:OnConnect(newPeer)
+				
+			elseif Event.type == "disconnect" then
+				
+				self.Peer[Event.peer] = nil
+				
+			elseif Event.type == "receive" then
+				
+				self:Receive(self.Peer[Event.peer], Event.data)
+				
+			end
 			
 		end
 		
 	until Event == nil
 	
+	for Object, NetworkObject in pairs(self.LocalObject) do
+		
+		NetworkObject:PushChanges()
+		
+	end
+	
+end
+
+function Server:OnConnect(Peer)
+	
 end
 
 function Server:Connect(Address)
 	
-	self.Socket:connect(Address)
+	self.Socket:connect(Address, 1, Sync.AddressLength)
 	
 end
 
@@ -78,57 +99,47 @@ function Server:Receive(Peer, Data)
 	local AddressLength = Peer:GetAddressLength()
 	local NumberLength = Peer:GetNumberLength()
 	
-	if Message.Remote then
+	if Message.Push then
 		
-		if Message.Push then
+		local Address = 0
+		local Exponent = 1
+		
+		for i = 1, AddressLength do
 			
-			local Address = 0
-			local Exponent = 1
-			
-			for i = 1, AddressLength do
-				
-				Address = Address + Data:byte(i) * Exponent
-				Exponent = Exponent * 256
-				
-			end
-			
-			local Data = Data:sub(AddressLength + 1)
+			Address = Address + Data:byte(i) * Exponent
+			Exponent = Exponent * 256
 			
 		end
 		
-	elseif Message.Create then
+		Data = Data:sub(AddressLength + 1)
 		
-		local ClassNameLength	= Data:byte(1); Data = Data:sub(2)
-		local ClassName			= Data:sub(1, ClassNameLength); Data = Data:sub(ClassNameLength + 1)
+		local Obj
 		
-		local Class = self.Class[Class]
+		if Message.Remote then
+			
+			Obj = self.LocalAddress[Address]
+			
+		else
+			
+			Obj = Peer:GetRemoteAddress(Address)
+			
+		end
 		
-		if Class then
+		if Obj then
 			
-			local Constructor = Class:GetConstructor()
-			local Attributes = Class:GetAttributes()
-			local Object = Constructor:new()
+			local NetworkObject
 			
-			local Address = 0
-			local Exponent = 1
-			
-			for i = 1, AddressLength do
+			if Message.Remote then
 				
-				Address = Address + Data:byte(i) * Exponent
-				Exponent = Exponent * 256
+				NetworkObject = self.LocalObject[Obj]
+				
+			else
+				
+				NetworkObject = Peer:GetRemoteObject(Obj)
 				
 			end
 			
-			local Data = Data:sub(AddressLength + 1)
-			local NetworkObject = Object:new(Class, Object)
-			
-			NetworkObject:SetRemote(true)
-			NetworkObject:SetAddress(Address)
-			
-			self.RemoteObject[Object] = NetworkObject
-			self.RemoteAddress[Address] = Object
-			
-			while #Data > 0 do
+			if NetworkObject then
 				
 				local IndexType = Data:byte(1); Data = Data:sub(2)
 				local Index
@@ -144,6 +155,7 @@ function Server:Receive(Peer, Data)
 					
 					Data = Data:sub(3)
 					Index = Data:sub(1, IndexLength)
+					Data = Data:sub(IndexLength + 1)
 					
 				end
 				
@@ -161,27 +173,148 @@ function Server:Receive(Peer, Data)
 					
 					Data = Data:sub(3)
 					Value = Data:sub(1, ValueLength)
+					Data = Data:sub(ValueLength + 1)
+					
+				elseif ValueType == Messages.Nil then
+					
+					Value = nil
 					
 				elseif ValueType == Messages.Object then
 					
-					local ObjectAddress = Data:byte(1) + Data:byte(2) * 256 + Data:byte(3) * 65536 + Data:byte(4) * 16777216
+					local Address = 0
+					local Exponent = 1
 					
-					Data = Data:sub(5)
-					Value = self.RemoteAddress[ObjectAddress]
+					for i = 1, AddressLength do
+						
+						Address = Address + Data:byte(i) * Exponent
+						Exponent = Exponent * 256
+						
+					end
+					
+					Data = Data:sub(AddressLength + 1)
+					Value = Peer:GetRemoteAddress(Address)
 					
 				end
 				
-				if Index and Value then
+				if Index then
 					
-					local Attribute = Attributes[Index]
+					NetworkObject:SetValue(Index, Value)
 					
-					if Attribute then
+				end
+				
+			end
+			
+		end
+		
+	elseif Message.Create then
+		
+		local ClassNameLength	= Data:byte(1); Data = Data:sub(2)
+		local ClassName			= Data:sub(1, ClassNameLength); Data = Data:sub(ClassNameLength + 1)
+		
+		local Class = self.Class[ClassName]
+		
+		if Class then
+			
+			local Constructor = Class:GetConstructor()
+			
+			if not Constructor then
+				
+				return error("Missing constructor method (new) for class '" .. Constructor .. "'")
+				
+			end
+			
+			local Attributes = Class:GetAttributes()
+			local Obj = Constructor:new()
+			
+			if Obj then
+				
+				local Address = 0
+				local Exponent = 1
+				
+				for i = 1, AddressLength do
+					
+					Address = Address + Data:byte(i) * Exponent
+					Exponent = Exponent * 256
+					
+				end
+				
+				Data = Data:sub(AddressLength + 1)
+				
+				local NetworkObject = Object:new(Class, Obj)
+				
+				NetworkObject:SetRemote(true)
+				NetworkObject:SetAddress(Address)
+				
+				Peer:SetRemoteObject(Object, NetworkObject)
+				Peer:SetRemoteAddress(Address, Obj)
+				
+				while #Data > 0 do
+					
+					local IndexType = Data:byte(1); Data = Data:sub(2)
+					local Index
+					
+					if IndexType == Messages.Number then
 						
-						Attribute:Set(Object, Value)
+						Index = Functions.numberFromString(Data:sub(1, NumberLength))
+						Data = Data:sub(NumberLength + 1)
+						
+					elseif IndexType == Messages.String then
+						
+						local IndexLength = Data:byte(1) + Data:byte(2) * 256
+						
+						Data = Data:sub(3)
+						Index = Data:sub(1, IndexLength)
+						Data = Data:sub(IndexLength + 1)
+						
+					end
+					
+					local ValueType = Data:byte(1); Data = Data:sub(2)
+					local Value
+					
+					if ValueType == Messages.Number then
+						
+						Value = Functions.numberFromString(Data:sub(1, NumberLength))
+						Data = Data:sub(NumberLength + 1)
+						
+					elseif ValueType == Messages.String then
+						
+						local ValueLength = Data:byte(1) + Data:byte(2) * 256
+						
+						Data = Data:sub(3)
+						Value = Data:sub(1, ValueLength)
+						Data = Data:sub(ValueLength + 1)
+						
+					elseif ValueType == Messages.Nil then
+						
+						Value = nil
+						
+					elseif ValueType == Messages.Object then
+						
+						local ObjectAddress = Data:byte(1) + Data:byte(2) * 256 + Data:byte(3) * 65536 + Data:byte(4) * 16777216
+						
+						Data = Data:sub(5)
+						Value = Peer:GetRemoteAddress(ObjectAddress)
+						
+					end
+					
+					if Index then
+						
+						local Attribute = Attributes[Index]
+						
+						if Attribute then
+							
+							Attribute:Set(Obj, Value)
+							
+						end
 						
 					end
 					
 				end
+				
+				table.insert(self.QueuedObjects, Obj)
+				
+				Peer:SetRemoteAddress(Address, Obj)
+				Peer:SetRemoteObject(Obj, NetworkObject)
 				
 			end
 			
@@ -200,10 +333,9 @@ function Server:Receive(Peer, Data)
 		end
 		
 		local Data = Data:sub(AddressLength + 1)
-		local Object = self.RemoteAddress[Address]
+		local Object = Peer:GetRemoteAddress(Address)
 		
-		self.RemoteAddress[Address] = nil
-		self.RemoteObject[Object] = nil
+		-- finish this part
 		
 	end
 	
@@ -227,15 +359,6 @@ function Server:AddLocalObject(Object)
 	
 	self.LocalObject[Obj] = Object
 	self.LocalAddress[Functions.AddressOf(Obj)] = Object
-	
-end
-
-function Server:AddRemoteObject(Object)
-	
-	local Obj = Object:GetObject()
-	
-	self.RemoteObject[Obj] = Object
-	self.RemoteAddress[Functions.AddressOf(Obj)] = Object
 	
 end
 
@@ -263,9 +386,17 @@ function Server:GetLocalObject(Object)
 	
 end
 
-function Server:GetRemoteObject(Object)
+function Server:ReceiveObject()
 	
-	return self.RemoteObject[Object]
+	local Index, Object = next(self.QueuedObjects)
+	
+	if Object then
+		
+		self.QueuedObjects[Index] = nil
+		
+	end
+	
+	return Object
 	
 end
 
