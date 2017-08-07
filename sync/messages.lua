@@ -5,11 +5,11 @@ Messages = {}
 Messages.Remote	= 1
 Messages.Create	= 2
 Messages.Remove	= 4
-Messages.Push	= 8
+Messages.Push		= 8
 
-Messages.Object = 1
-Messages.Number = 2
-Messages.String = 3
+Messages.Object	= 1
+Messages.Number	= 2
+Messages.String	= 3
 
 function Messages.toTable(Byte)
 	

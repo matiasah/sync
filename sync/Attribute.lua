@@ -76,4 +76,10 @@ function Attribute:Get(Object)
 	
 end
 
+function Attribute:Set(Object, Value)
+	
+	Object[self.Name] = Value
+	
+end
+
 return Attribute

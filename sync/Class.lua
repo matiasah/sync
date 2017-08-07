@@ -15,12 +15,15 @@ Class.RemoveChannel = 0
 Class.RemoveReliable = true
 Class.RemoveSequenced = true
 
-function Class:new(Server)
+function Class:new(Server, Name)
 	
 	local self = setmetatable( {}, Class )
 	
 	self.Attributes = {}
+	self.Name = Name
+	
 	self.Server = Server
+	self.Server:SetClass(Name, self)
 	
 	return self
 	
@@ -36,9 +39,27 @@ function Class:Create(Obj)
 	
 end
 
+function Class:SetConstructor(Constructor)
+	
+	self.Constructor = Constructor
+	
+end
+
+function Class:GetConstructor()
+	
+	return self.Constructor
+	
+end
+
 function Class:GetServer()
 	
 	return self.Server
+	
+end
+
+function Class:GetName()
+	
+	return self.Name
 	
 end
 

@@ -38,6 +38,12 @@ function Object:GetAddress()
 	
 end
 
+function Object:SetAddress(Address)
+	
+	self.Address = Address
+	
+end
+
 function Object:FetchChanges()
 	
 	local Changes = {}
@@ -165,7 +171,14 @@ function Object:Send(Peer)
 		Create = true,
 	}
 	
-	local Datagram = string.char(Byte)
+	local Address = self.Address
+	local ByteAddr1 = Address % 256; Address = ( Address - ByteAddr1 ) / 256
+	local ByteAddr2 = Address % 256; Address = ( Address - ByteAddr2 ) / 256
+	local ByteAddr3 = Address % 256; Address = ( Address - ByteAddr3 ) / 256
+	local ByteAddr4 = Address
+	
+	local Name = self.Class:GetName()
+	local Datagram = string.char(Byte) .. string.char(#Name) .. Name .. string.char(ByteAddr1) .. string.char(ByteAddr2) .. string.char(ByteAddr3) .. string.char(ByteAddr4)
 	
 	for Index, Attribute in pairs(self.Class:GetAttributes()) do
 		

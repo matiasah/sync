@@ -1,10 +1,10 @@
 local sync = require("sync")
-local f = require("sync.functions")
 
-local str = f.numberToString(math.pi)
+Server = require("sync.Server")
 
-collectgarbage()
-
-local n = f.numberFromString(str)
-print(n)
-print(math.pi)
+function love.load()
+	
+	sv = Server:new()
+	sv2 = Server:new()
+	
+end
