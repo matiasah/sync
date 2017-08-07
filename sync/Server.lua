@@ -2,8 +2,10 @@ module("sync.Server", package.seeall)
 
 enet = require("enet")
 
-Functions	= require("sync.functions")
-Messages		= require("sync.messages")
+Sync			=	require("sync")
+Functions	=	require("sync.functions")
+Messages		=	require("sync.messages")
+Peer			=	require("sync.Peer")
 
 Server = {}
 Server.__index = Server
@@ -42,23 +44,19 @@ function Server:Update()
 		
 		if Event.type == "connect" then
 			
-			table.insert(self.Peer, Event.peer)
+			local newPeer = Peer:new(Event.peer)
+			
+			newPeer:SetAddressLength(Event.data)
+			
+			self.Peer[Event.peer] = newPeer
 			
 		elseif Event.type == "disconnect" then
 			
-			for Index, Peer in pairs(self.Peer) do
-				
-				if Peer == self.Peer then
-					
-					self.Peer[Index] = nil
-					
-				end
-				
-			end
+			self.Peer[Event.peer] = nil
 			
 		elseif Event.type == "receive" then
 			
-			self:Receive(Event.peer, Event.data)
+			self:Receive(self.Peer[Event.peer], Event.data)
 			
 		end
 		
@@ -77,6 +75,9 @@ function Server:Receive(Peer, Data)
 	local Byte = Data:byte(1); Data = Data:sub(2)
 	local Message = Messages.toTable(Byte)
 	
+	local AddressLength = Peer:GetAddressLength()
+	local NumberLength = Peer:GetNumberLength()
+	
 	if Message.Remote then
 		
 	elseif Message.Create then
@@ -92,7 +93,17 @@ function Server:Receive(Peer, Data)
 			local Attributes = Class:GetAttributes()
 			local Object = Constructor:new()
 			
-			local Address = Data:byte(1) + Data:byte(2) * 256 + Data:byte(3) * 65536 + Data:byte(4) * 16777216; Data = Data:sub(5)
+			local Address = 0
+			local Exponent = 1
+			
+			for i = 1, AddressLength do
+				
+				Address = Address + Data:byte(i) * Exponent
+				Exponent = Exponent * 256
+				
+			end
+			
+			local Data = Data:sub(AddressLength + 1)
 			local NetworkObject = Object:new(Class, Object)
 			
 			NetworkObject:SetRemote(true)
@@ -108,8 +119,8 @@ function Server:Receive(Peer, Data)
 				
 				if IndexType == Messages.Number then
 					
-					Index = Functions.numberFromString(Data:sub(1, 8))
-					Data = Data:sub(9)
+					Index = Functions.numberFromString(Data:sub(1, NumberLength))
+					Data = Data:sub(NumberLength + 1)
 					
 				elseif IndexType == Messages.String then
 					
@@ -125,8 +136,8 @@ function Server:Receive(Peer, Data)
 				
 				if ValueType == Messages.Number then
 					
-					Value = Functions.numberFromString(Data:sub(1, 8))
-					Data = Data:sub(9)
+					Value = Functions.numberFromString(Data:sub(1, NumberLength))
+					Data = Data:sub(NumberLength + 1)
 					
 				elseif ValueType == Messages.String then
 					
