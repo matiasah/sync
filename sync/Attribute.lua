@@ -8,6 +8,8 @@ Attribute.Reliable = false
 Attribute.Sequenced = false
 Attribute.Channel = 0
 
+Attribute.Delay = 0
+
 function Attribute:new(Name)
 	
 	local self = setmetatable( {}, Attribute )
@@ -18,9 +20,25 @@ function Attribute:new(Name)
 	
 end
 
+function Attribute:SetDelay(Delay)
+	
+	self.Delay = Delay
+	
+	return self
+	
+end
+
+function Attribute:GetDelay()
+	
+	return self.Delay
+	
+end
+
 function Attribute:SetReliable(Reliable)
 	
 	self.Reliable = Reliable
+	
+	return self
 	
 end
 
@@ -33,6 +51,8 @@ end
 function Attribute:SetSequenced(Sequenced)
 	
 	self.Sequenced = Sequenced
+	
+	return self
 	
 end
 
@@ -61,6 +81,8 @@ end
 function Attribute:SetChannel(Channel)
 	
 	self.Channel = Channel
+	
+	return self
 	
 end
 

@@ -21,6 +21,7 @@ function Object:new(Class, Value)
 	self.Object = Value
 	self.Address = Functions.AddressOf(Value)
 	self.Value = {}
+	self.Sent = {}
 	self.Peers = setmetatable( {}, WeakValues )
 	
 	return self
@@ -48,15 +49,21 @@ end
 function Object:FetchChanges()
 	
 	local Changes = {}
+	local Time = love.timer.getTime()
 	
 	for Name, Attribute in pairs(self.Class:GetAttributes()) do
 		
-		local Value = Attribute:Get(self.Object)
-		
-		if self.Value[Name] ~= Value then
+		if not self.Sent[Name] or Time - self.Sent[Name] >= Attribute:GetDelay() then
 			
-			Changes[Name]		= Value
-			self.Value[Name]	= Value
+			local Value = Attribute:Get(self.Object)
+			
+			if self.Value[Name] ~= Value then
+				
+				Changes[Name]		= Value
+				self.Value[Name]	= Value
+				self.Sent[Name] = Time
+				
+			end
 			
 		end
 		

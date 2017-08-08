@@ -13,11 +13,11 @@ function love.load()
 	local firstClass = Class:new(sv, "test")
 	local secondClass = Class:new(sv2, "test")
 	
-	firstClass:AddAttribute("loli")
-	secondClass:AddAttribute("loli")
+	firstClass:AddAttribute("x"):SetReliable(false):SetSequenced(false):SetDelay(0.1)
+	secondClass:AddAttribute("x"):SetReliable(false):SetSequenced(false)
 	secondClass:SetConstructor({new = function () return {} end})
 	
-	object1 = {loli = 123}
+	object1 = {x = 0}
 	
 	function sv:OnConnect(Peer)
 		
@@ -42,7 +42,8 @@ function love.update()
 	
 	if object2 then
 		
-		object1.loli = object1.loli + 1
+		object1.x = object1.x + 1
+		print(object2.x)
 		
 	end
 	

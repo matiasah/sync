@@ -5,22 +5,7 @@ function love.conf(t)
 	t.accelerometerjoystick = false	  -- Enable the accelerometer on iOS and Android by exposing it as a Joystick (boolean)
 	t.gammacorrect = false			  -- Enable gamma-correct rendering, when supported by the system (boolean)
  
-	t.window.title = "Play2D"		 -- The window title (string)
-	--t.window.icon = "src/icon.png"				 -- Filepath to an image to use as the window's icon (string)
-	t.window.width = 1000				-- The window width (number)
-	t.window.height = 600			   -- The window height (number)
-	t.window.borderless = false		 -- Remove all border visuals from the window (boolean)
-	t.window.resizable = false		  -- Let the window be user-resizable (boolean)
-	t.window.minwidth = 1			   -- Minimum window width if the window is resizable (number)
-	t.window.minheight = 1			  -- Minimum window height if the window is resizable (number)
-	t.window.fullscreen = false		 -- Enable fullscreen (boolean)
-	t.window.fullscreentype = "desktop" -- Choose between "desktop" fullscreen or "exclusive" fullscreen mode (string)
-	t.window.vsync = false			   -- Enable vertical sync (boolean)
-	t.window.msaa = 0				   -- The number of samples to use with multi-sampled antialiasing (number)
-	t.window.display = 1				-- Index of the monitor to show the window in (number)
-	t.window.highdpi = false			-- Enable high-dpi mode for the window on a Retina display (boolean)
-	t.window.x = nil					-- The x-coordinate of the window's position in the specified display (number)
-	t.window.y = nil					-- The y-coordinate of the window's position in the specified display (number)
+	t.window = false
  
 	t.modules.audio = true			  -- Enable the audio module (boolean)
 	t.modules.event = true			  -- Enable the event module (boolean)
@@ -38,90 +23,4 @@ function love.conf(t)
 	t.modules.video = false			  -- Enable the video module (boolean)
 	t.modules.window = true			 -- Enable the window module (boolean)
 	t.modules.thread = true			 -- Enable the thread module (boolean)
-end
-
-function love.run()
-	love.math.setRandomSeed(os.time())
-
-	if love.load then
-		
-		love.load(arg)
-		
-	end
-	
-	local tim = love.timer
-	local graphs = love.graphics
-	local even = love.event
-	
-	local delta = 0
-	
-	local defaultFont = graphs.newFont(8)
-	
-	tim.step()
-	
-	-- Main loop time.
-	while true do
-		local startTime = tim.getTime()
-		
-		-- Process events.
-		even.pump()	
-		for name, a, b, c, d, e, f in even.poll() do
-			if name == "quit" then
-				if not love.quit or not love.quit() then
-					return love.audio.stop()
-				end
-			end
-			
-			love.handlers[name](a, b, c, d, e, f)
-		end
- 
-		-- Update dt, as we'll be passing it to update
-		tim.step()
-		delta = tim.getDelta()
- 
-		-- Call update and draw
-		if love.update then
-			
-			love.update(delta)
-			
-		end
- 
-		if graphs and graphs.isActive() then
-			graphs.clear(graphs.getBackgroundColor())
-			graphs.origin()
-			
-			if love.draw then
-				
-				love.draw()
-				
-			end
-			
-			local stats = love.graphics.getStats()
-			local r, g, b, a = graphs.getColor()
-			local font = graphs.getFont()
-
-			graphs.setColor(200, 200, 200, 175)
-			graphs.setFont(defaultFont)
-			graphs.print("FPS: "..math.floor(1 / delta).."\nDrawcalls: "..stats.drawcalls.."\nTexture memory: "..string.format("%.2f MB", stats.texturememory / 1024 / 1024).."\nLua Memory: "..string.format("%.2f MB", collectgarbage("count") / 1024).."\nCanvases: "..stats.canvases.."\nCanvas switches: "..stats.canvasswitches, 0, 0)
-			
-			graphs.setColor(r, g, b, a)
-			graphs.setFont(font)
-			graphs.present()
-		end
-		
-		local endTime = tim.getTime()
-		local deltaF = endTime - startTime
-
-		if graphs.maxFramerate then
-			local maxDelta = 1 / graphs.maxFramerate
-			local sleep = maxDelta - deltaF -  0.0005
-
-			if sleep >= 0.001 then
-				tim.sleep(sleep)
-			end
-		else
-			tim.sleep(0.001)
-		end
-	end
-
 end
