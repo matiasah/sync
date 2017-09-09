@@ -141,23 +141,8 @@ function Server:Receive(Peer, Data)
 			
 			if NetworkObject then
 				
-				local IndexType = Data:byte(1); Data = Data:sub(2)
-				local Index
-				
-				if IndexType == Messages.Number then
-					
-					Index = Functions.numberFromString(Data:sub(1, NumberLength))
-					Data = Data:sub(NumberLength + 1)
-					
-				elseif IndexType == Messages.String then
-					
-					local IndexLength = Data:byte(1) + Data:byte(2) * 256
-					
-					Data = Data:sub(3)
-					Index = Data:sub(1, IndexLength)
-					Data = Data:sub(IndexLength + 1)
-					
-				end
+				local IndexValue = Data:byte(1); Data = Data:sub(2)
+				local Index = NetworkObject:GetClass():GetAttributeAt(IndexValue):GetName()
 				
 				local ValueType = Data:byte(1); Data = Data:sub(2)
 				local Value
@@ -250,23 +235,8 @@ function Server:Receive(Peer, Data)
 				
 				while #Data > 0 do
 					
-					local IndexType = Data:byte(1); Data = Data:sub(2)
-					local Index
-					
-					if IndexType == Messages.Number then
-						
-						Index = Functions.numberFromString(Data:sub(1, NumberLength))
-						Data = Data:sub(NumberLength + 1)
-						
-					elseif IndexType == Messages.String then
-						
-						local IndexLength = Data:byte(1) + Data:byte(2) * 256
-						
-						Data = Data:sub(3)
-						Index = Data:sub(1, IndexLength)
-						Data = Data:sub(IndexLength + 1)
-						
-					end
+					local IndexValue = Data:byte(1); Data = Data:sub(2)
+					local Index = NetworkObject:GetClass():GetAttributeAt(IndexValue):GetName()
 					
 					local ValueType = Data:byte(1); Data = Data:sub(2)
 					local Value

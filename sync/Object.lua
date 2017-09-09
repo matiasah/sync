@@ -102,24 +102,8 @@ function Object:PushChanges()
 		}
 		
 		local Attribute = Attributes[Index]
-		local StringIndex
-		local IndexType = type(Index)
-		
 		local Datagram = string.char(Header) .. AddressMessage
-		
-		if IndexType == "number" then
-			
-			StringIndex = string.char(Messages.Number) .. Functions.numberToString(Index)
-			
-		elseif IndexType == "string" then
-			
-			local Length = #Index
-			local Byte1 = Length % 256
-			local Byte2 = ( Length - Byte1 ) / 256
-			
-			StringIndex = string.char(Messages.String) .. string.char(Byte1) .. string.char(Byte2) .. Index
-			
-		end
+		local StringIndex = string.char(Attribute:GetIndex())
 		
 		if StringIndex then
 			
@@ -229,23 +213,9 @@ function Object:Send(Peer)
 	for Index, Attribute in pairs(self.Class:GetAttributes()) do
 		
 		local Value = Attribute:Get(self.Object)
+		local Datagram = string.char(Header) .. AddressMessage
 		
-		local StringIndex
-		local IndexType = type(Index)
-		
-		if IndexType == "number" then
-			
-			StringIndex = string.char(Messages.Number) .. Functions.numberToString(Index)
-			
-		elseif IndexType == "string" then
-			
-			local Length = #Index
-			local Byte1 = Length % 256
-			local Byte2 = ( Length - Byte1 ) / 256
-			
-			StringIndex = string.char(Messages.String) .. string.char(Byte1) .. string.char(Byte2) .. Index
-			
-		end
+		local StringIndex = string.char(Attribute:GetIndex())
 		
 		if StringIndex then
 			
@@ -330,6 +300,12 @@ function Object:SetValue(Index, Value)
 		self.Value[Index] = Value
 		
 	end
+	
+end
+
+function Object:GetClass()
+	
+	return self.Class
 	
 end
 

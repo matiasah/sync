@@ -13,7 +13,7 @@ function love.load()
 	local firstClass = Class:new(sv, "test")
 	local secondClass = Class:new(sv2, "test")
 	
-	firstClass:AddAttribute("x"):SetReliable(false):SetSequenced(false):SetDelay(0.1)
+	firstClass:AddAttribute("x"):SetReliable(false):SetSequenced(false):SetDelay(0.4)
 	secondClass:AddAttribute("x"):SetReliable(false):SetSequenced(false)
 	secondClass:SetConstructor({new = function () return {} end})
 	

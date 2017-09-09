@@ -9,6 +9,7 @@ Attribute.Sequenced = false
 Attribute.Channel = 0
 
 Attribute.Delay = 0
+Attribute.Index = 0
 
 function Attribute:new(Name)
 	
@@ -101,6 +102,24 @@ end
 function Attribute:Set(Object, Value)
 	
 	Object[self.Name] = Value
+	
+end
+
+function Attribute:SetIndex(Index)
+	
+	self.Index = Index
+	
+end
+
+function Attribute:GetIndex()
+	
+	return self.Index
+	
+end
+
+function Attribute:GetName()
+	
+	return self.Name
 	
 end
 

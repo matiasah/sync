@@ -15,11 +15,14 @@ Class.RemoveChannel = 0
 Class.RemoveReliable = true
 Class.RemoveSequenced = true
 
+Class.AttributeIndex = 1
+
 function Class:new(Server, Name)
 	
 	local self = setmetatable( {}, Class )
 	
 	self.Attributes = {}
+	self.AttributesIndex = {}
 	self.Name = Name
 	
 	self.Server = Server
@@ -175,7 +178,11 @@ function Class:AddAttribute(AttributeName)
 	
 	local newAttribute = Attribute:new(AttributeName)
 	
+	newAttribute:SetIndex(self.AttributeIndex)
+	
 	self.Attributes[AttributeName] = newAttribute
+	self.AttributesIndex[self.AttributeIndex] = newAttribute
+	self.AttributeIndex = self.AttributeIndex + 1
 	
 	return newAttribute
 	
@@ -184,6 +191,12 @@ end
 function Class:GetAttributes()
 	
 	return self.Attributes
+	
+end
+
+function Class:GetAttributeAt(Index)
+	
+	return self.AttributesIndex[Index]
 	
 end
 
