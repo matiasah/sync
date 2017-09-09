@@ -194,6 +194,7 @@ function Class:GetAttributes()
 	
 end
 
+function Class:GetAttribute(AttributeName)
 	
 	return self.Attribute[AttributeName]
 	
