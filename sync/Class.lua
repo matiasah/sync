@@ -194,6 +194,11 @@ function Class:GetAttributes()
 	
 end
 
+	
+	return self.Attribute[AttributeName]
+	
+end
+
 function Class:GetAttributeAt(Index)
 	
 	return self.AttributesIndex[Index]
