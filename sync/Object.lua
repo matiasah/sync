@@ -18,19 +18,33 @@ function Object:new(Class, Value)
 	
 	self.Class = Class
 	self.Server = Class:GetServer()
-	self.Object = Value
+	self.Object = setmetatable( {Value}, WeakValues )
 	self.Address = Functions.AddressOf(Value)
 	self.Value = {}
 	self.Sent = {}
 	self.Peers = setmetatable( {}, WeakValues )
 	
-	return self
+	self.Proxy = newproxy(true)
+	
+	local Metatable = getmetatable(self.Proxy)
+	
+	Metatable.__index = self
+	Metatable.__newindex = self
+	Metatable.__gc = Object.__gc
+	
+	return self.Proxy
+	
+end
+
+function Object:__gc()
+	
+	print("OBJECT REMOVED")
 	
 end
 
 function Object:GetObject()
 	
-	return self.Object
+	return self.Object[1]
 	
 end
 
@@ -53,9 +67,11 @@ function Object:FetchChanges()
 	
 	for Name, Attribute in pairs(self.Class:GetAttributes()) do
 		
-		if not self.Sent[Name] or Time - self.Sent[Name] >= Attribute:GetDelay() then
+		local Sent = self.Sent[Name]
+		
+		if not Sent or ( Time - Sent ) >= Attribute:GetDelay() then
 			
-			local Value = Attribute:Get(self.Object)
+			local Value = Attribute:Get(self.Object[1])
 			
 			if self.Value[Name] ~= Value then
 				
@@ -212,7 +228,7 @@ function Object:Send(Peer)
 	
 	for Index, Attribute in pairs(self.Class:GetAttributes()) do
 		
-		local Value = Attribute:Get(self.Object)
+		local Value = Attribute:Get(self.Object[1])
 		local Datagram = string.char(Header) .. AddressMessage
 		
 		local StringIndex = string.char(Attribute:GetIndex())
@@ -296,7 +312,7 @@ function Object:SetValue(Index, Value)
 	
 	if Attribute then
 		
-		Attribute:Set(self.Object, Value)
+		Attribute:Set(self.Object[1], Value)
 		self.Value[Index] = Value
 		
 	end

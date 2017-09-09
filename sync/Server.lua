@@ -96,50 +96,165 @@ function Server:Receive(Peer, Data)
 	local Byte = Data:byte(1); Data = Data:sub(2)
 	local Message = Messages.toTable(Byte)
 	
+	if Message.Push then
+		
+		self:ReceivePushMessage(Peer, Data, Message)
+		
+	elseif Message.Create then
+		
+		self:ReceiveCreateMessage(Peer, Data, Message)
+		
+	elseif Message.Remove then
+		
+		self:ReceiveRemoveMessage(Peer, Data, Message)
+		
+	end
+	
+end
+
+function Server:ReceivePushMessage(Peer, Data, Message)
+	
 	local AddressLength = Peer:GetAddressLength()
 	local NumberLength = Peer:GetNumberLength()
 	
-	if Message.Push then
+	local Address = 0
+	local Exponent = 1
+	
+	for i = 1, AddressLength do
 		
-		local Address = 0
-		local Exponent = 1
+		Address = Address + Data:byte(i) * Exponent
+		Exponent = Exponent * 256
 		
-		for i = 1, AddressLength do
-			
-			Address = Address + Data:byte(i) * Exponent
-			Exponent = Exponent * 256
-			
-		end
+	end
+	
+	Data = Data:sub(AddressLength + 1)
+	
+	local Obj
+	
+	if Message.Remote then
 		
-		Data = Data:sub(AddressLength + 1)
+		Obj = self.LocalAddress[Address]
 		
-		local Obj
+	else
+		
+		Obj = Peer:GetRemoteAddress(Address)
+		
+	end
+	
+	if Obj then
+		
+		local NetworkObject
 		
 		if Message.Remote then
 			
-			Obj = self.LocalAddress[Address]
+			NetworkObject = self.LocalObject[Obj]
 			
 		else
 			
-			Obj = Peer:GetRemoteAddress(Address)
+			NetworkObject = Peer:GetRemoteObject(Obj)
 			
 		end
 		
-		if Obj then
+		if NetworkObject then
 			
-			local NetworkObject
+			local IndexValue = Data:byte(1); Data = Data:sub(2)
+			local Index = NetworkObject:GetClass():GetAttributeAt(IndexValue):GetName()
 			
-			if Message.Remote then
+			local ValueType = Data:byte(1); Data = Data:sub(2)
+			local Value
+			
+			if ValueType == Messages.Number then
 				
-				NetworkObject = self.LocalObject[Obj]
+				Value = Functions.numberFromString(Data:sub(1, NumberLength))
+				Data = Data:sub(NumberLength + 1)
 				
-			else
+			elseif ValueType == Messages.String then
 				
-				NetworkObject = Peer:GetRemoteObject(Obj)
+				local ValueLength = Data:byte(1) + Data:byte(2) * 256
+				
+				Data = Data:sub(3)
+				Value = Data:sub(1, ValueLength)
+				Data = Data:sub(ValueLength + 1)
+				
+			elseif ValueType == Messages.Nil then
+				
+				Value = nil
+				
+			elseif ValueType == Messages.Object then
+				
+				local Address = 0
+				local Exponent = 1
+				
+				for i = 1, AddressLength do
+					
+					Address = Address + Data:byte(i) * Exponent
+					Exponent = Exponent * 256
+					
+				end
+				
+				Data = Data:sub(AddressLength + 1)
+				Value = Peer:GetRemoteAddress(Address)
 				
 			end
 			
-			if NetworkObject then
+			if Index then
+				
+				NetworkObject:SetValue(Index, Value)
+				
+			end
+			
+		end
+		
+	end
+	
+end
+
+function Server:ReceiveCreateMessage(Peer, Data, Message)
+	
+	local AddressLength = Peer:GetAddressLength()
+	local NumberLength = Peer:GetNumberLength()
+	
+	local ClassNameLength	= Data:byte(1); Data = Data:sub(2)
+	local ClassName			= Data:sub(1, ClassNameLength); Data = Data:sub(ClassNameLength + 1)
+	
+	local Class = self.Class[ClassName]
+	
+	if Class then
+		
+		local Constructor = Class:GetConstructor()
+		
+		if not Constructor then
+			
+			return error("Missing constructor method (new) for class '" .. Constructor .. "'")
+			
+		end
+		
+		local Attributes = Class:GetAttributes()
+		local Obj = Constructor:new()
+		
+		if Obj then
+			
+			local Address = 0
+			local Exponent = 1
+			
+			for i = 1, AddressLength do
+				
+				Address = Address + Data:byte(i) * Exponent
+				Exponent = Exponent * 256
+				
+			end
+			
+			Data = Data:sub(AddressLength + 1)
+			
+			local NetworkObject = Object:new(Class, Obj)
+			
+			NetworkObject:SetRemote(true)
+			NetworkObject:SetAddress(Address)
+			
+			Peer:SetRemoteObject(Object, NetworkObject)
+			Peer:SetRemoteAddress(Address, Obj)
+			
+			while #Data > 0 do
 				
 				local IndexValue = Data:byte(1); Data = Data:sub(2)
 				local Index = NetworkObject:GetClass():GetAttributeAt(IndexValue):GetName()
@@ -166,148 +281,58 @@ function Server:Receive(Peer, Data)
 					
 				elseif ValueType == Messages.Object then
 					
-					local Address = 0
-					local Exponent = 1
+					local ObjectAddress = Data:byte(1) + Data:byte(2) * 256 + Data:byte(3) * 65536 + Data:byte(4) * 16777216
 					
-					for i = 1, AddressLength do
-						
-						Address = Address + Data:byte(i) * Exponent
-						Exponent = Exponent * 256
-						
-					end
-					
-					Data = Data:sub(AddressLength + 1)
-					Value = Peer:GetRemoteAddress(Address)
+					Data = Data:sub(5)
+					Value = Peer:GetRemoteAddress(ObjectAddress)
 					
 				end
 				
 				if Index then
 					
-					NetworkObject:SetValue(Index, Value)
+					local Attribute = Attributes[Index]
 					
-				end
-				
-			end
-			
-		end
-		
-	elseif Message.Create then
-		
-		local ClassNameLength	= Data:byte(1); Data = Data:sub(2)
-		local ClassName			= Data:sub(1, ClassNameLength); Data = Data:sub(ClassNameLength + 1)
-		
-		local Class = self.Class[ClassName]
-		
-		if Class then
-			
-			local Constructor = Class:GetConstructor()
-			
-			if not Constructor then
-				
-				return error("Missing constructor method (new) for class '" .. Constructor .. "'")
-				
-			end
-			
-			local Attributes = Class:GetAttributes()
-			local Obj = Constructor:new()
-			
-			if Obj then
-				
-				local Address = 0
-				local Exponent = 1
-				
-				for i = 1, AddressLength do
-					
-					Address = Address + Data:byte(i) * Exponent
-					Exponent = Exponent * 256
-					
-				end
-				
-				Data = Data:sub(AddressLength + 1)
-				
-				local NetworkObject = Object:new(Class, Obj)
-				
-				NetworkObject:SetRemote(true)
-				NetworkObject:SetAddress(Address)
-				
-				Peer:SetRemoteObject(Object, NetworkObject)
-				Peer:SetRemoteAddress(Address, Obj)
-				
-				while #Data > 0 do
-					
-					local IndexValue = Data:byte(1); Data = Data:sub(2)
-					local Index = NetworkObject:GetClass():GetAttributeAt(IndexValue):GetName()
-					
-					local ValueType = Data:byte(1); Data = Data:sub(2)
-					local Value
-					
-					if ValueType == Messages.Number then
+					if Attribute then
 						
-						Value = Functions.numberFromString(Data:sub(1, NumberLength))
-						Data = Data:sub(NumberLength + 1)
-						
-					elseif ValueType == Messages.String then
-						
-						local ValueLength = Data:byte(1) + Data:byte(2) * 256
-						
-						Data = Data:sub(3)
-						Value = Data:sub(1, ValueLength)
-						Data = Data:sub(ValueLength + 1)
-						
-					elseif ValueType == Messages.Nil then
-						
-						Value = nil
-						
-					elseif ValueType == Messages.Object then
-						
-						local ObjectAddress = Data:byte(1) + Data:byte(2) * 256 + Data:byte(3) * 65536 + Data:byte(4) * 16777216
-						
-						Data = Data:sub(5)
-						Value = Peer:GetRemoteAddress(ObjectAddress)
-						
-					end
-					
-					if Index then
-						
-						local Attribute = Attributes[Index]
-						
-						if Attribute then
-							
-							Attribute:Set(Obj, Value)
-							
-						end
+						Attribute:Set(Obj, Value)
 						
 					end
 					
 				end
 				
-				table.insert(self.QueuedObjects, Obj)
-				
-				Peer:SetRemoteAddress(Address, Obj)
-				Peer:SetRemoteObject(Obj, NetworkObject)
-				
 			end
 			
-		end
-		
-	elseif Message.Remove then
-		
-		local Address = 0
-		local Exponent = 1
-		
-		for i = 1, AddressLength do
+			table.insert(self.QueuedObjects, Obj)
 			
-			Address = Address + Data:byte(i) * Exponent
-			Exponent = Exponent * 256
+			Peer:SetRemoteAddress(Address, Obj)
+			Peer:SetRemoteObject(Obj, NetworkObject)
 			
 		end
-		
-		local Data = Data:sub(AddressLength + 1)
-		local Object = Peer:GetRemoteAddress(Address)
-		
-		-- finish this part
 		
 	end
+	
+end
+
+function Server:ReceiveRemoveMessage(Peer, Data, Message)
+	
+	local AddressLength = Peer:GetAddressLength()
+	
+	local Address = 0
+	local Exponent = 1
+	
+	for i = 1, AddressLength do
+		
+		Address = Address + Data:byte(i) * Exponent
+		Exponent = Exponent * 256
+		
+	end
+	
+	local Data = Data:sub(AddressLength + 1)
+	local Object = Peer:GetRemoteAddress(Address)
+	
+	-- finish this part
+	
+	print("Object", Address, "removed")
 	
 end
 

@@ -13,7 +13,7 @@ function love.load()
 	local firstClass = Class:new(sv, "test")
 	local secondClass = Class:new(sv2, "test")
 	
-	firstClass:AddAttribute("x"):SetReliable(false):SetSequenced(false):SetDelay(0.4)
+	firstClass:AddAttribute("x"):SetReliable(false):SetSequenced(false):SetDelay(0.2)
 	secondClass:AddAttribute("x"):SetReliable(false):SetSequenced(false)
 	secondClass:SetConstructor({new = function () return {} end})
 	
@@ -26,6 +26,8 @@ function love.load()
 	end
 	
 end
+
+local t = love.timer.getTime()
 
 function love.update()
 	
@@ -40,11 +42,35 @@ function love.update()
 		
 	end
 	
-	if object2 then
+	if love.timer.getTime() - t > 1 then
 		
-		object1.x = object1.x + 1
-		print(object2.x)
+		if object1 then
+			
+			object1 = nil
+			
+		end
 		
 	end
+	
+	if object2 and object1 then
+		
+		object1.x = object1.x + 1
+		--print(object2.x)
+		
+	end
+	
+end
+
+function cnt(t)
+	
+	local c = 0
+	
+	for k, v in pairs(t) do
+		
+		c = c + 1
+		
+	end
+	
+	return c
 	
 end
