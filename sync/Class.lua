@@ -170,10 +170,6 @@ function Class:GetRemoveFlags()
 	
 end
 
-function Class:AddGetterMethod(Atribute, Name)
-	
-end
-
 function Class:AddAttribute(AttributeName)
 	
 	local newAttribute = Attribute:new(AttributeName)

@@ -38,7 +38,33 @@ end
 
 function Object:__gc()
 	
-	print("OBJECT REMOVED")
+	if not self.Remote then
+		
+		local Address = self.Address
+		local AddressLength = Sync.AddressLength
+		local AddressMessage = ""
+		
+		for i = 1, AddressLength do
+			
+			local Byte = Address % 256
+			
+			Address = ( Address - Byte ) / 256
+			AddressMessage = AddressMessage .. string.char(Byte)
+			
+		end
+		
+		local Header = Messages.toByte {
+			Remote	= self.Remote,
+			Remove	= true,
+		}
+		
+		for Index, Peer in pairs(self.Peers) do
+			
+			Peer:Send( string.char(Header) .. AddressMessage )
+			
+		end
+		
+	end
 	
 end
 

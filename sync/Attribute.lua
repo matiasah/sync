@@ -95,11 +95,23 @@ end
 
 function Attribute:Get(Object)
 	
+	if self.Getter then
+		
+		return self.Getter(Object)
+		
+	end
+	
 	return Object[self.Name]
 	
 end
 
 function Attribute:Set(Object, Value)
+	
+	if self.Setter then
+		
+		return self.Setter(Object, Value)
+		
+	end
 	
 	Object[self.Name] = Value
 	
@@ -120,6 +132,34 @@ end
 function Attribute:GetName()
 	
 	return self.Name
+	
+end
+
+function Attribute:SetSetter(Setter)
+	
+	self.Setter = Setter
+	
+	return self
+	
+end
+
+function Attribute:GetSetter()
+	
+	return self.Setter
+	
+end
+
+function Attribute:SetGetter(Getter)
+	
+	self.Getter = Getter
+	
+	return self
+	
+end
+
+function Attribute:GetGetter()
+	
+	return self.Getter
 	
 end
 

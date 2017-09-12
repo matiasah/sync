@@ -316,7 +316,6 @@ end
 function Server:ReceiveRemoveMessage(Peer, Data, Message)
 	
 	local AddressLength = Peer:GetAddressLength()
-	
 	local Address = 0
 	local Exponent = 1
 	
@@ -330,9 +329,8 @@ function Server:ReceiveRemoveMessage(Peer, Data, Message)
 	local Data = Data:sub(AddressLength + 1)
 	local Object = Peer:GetRemoteAddress(Address)
 	
-	-- finish this part
-	
-	print("Object", Address, "removed")
+	Peer:SetRemoteAddress(Address, nil)
+	Peer:SetRemoteObject(Object, nil)
 	
 end
 
